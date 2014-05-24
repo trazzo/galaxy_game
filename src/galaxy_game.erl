@@ -102,7 +102,6 @@ wait_for_planets(Planets) ->
         {error, timeout}
     end.
 
-
 %% @doc Clean up a universe simulation.
 %% This function will only be called after calling setup_universe/3 with the
 %% same set of planets.
@@ -142,4 +141,3 @@ simulate_attack(Planets, Actions) ->
     timer:sleep(200),
     lists:filter(fun (P) -> is_pid(whereis(P)) end,Planets).
     
-        

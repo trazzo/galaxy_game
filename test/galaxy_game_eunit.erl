@@ -9,7 +9,7 @@ galaxy_game_test_() ->
     A = [{nuclear, venus}, {laser, earth}],
     Exp = [earth, mars],
     [
-        {setup,
+        {setup, 
             %Setup
             fun () -> galaxy_game:setup_universe(P, S, As) end,
             %Teardown
