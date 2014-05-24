@@ -21,7 +21,7 @@ galaxy_game_test_() ->
                             ?_assertEqual(true, true);
                         V ->
                             validity_printout(V),
-                            ?assertEqual(true, false)
+                            ?_assertEqual(true, false)
                     end
             end
         },
