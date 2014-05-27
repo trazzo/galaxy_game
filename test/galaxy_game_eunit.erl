@@ -8,32 +8,27 @@ galaxy_game_test_() ->
     As = [{mercury, venus}, {venus, earth}],
     A = [{nuclear, venus}, {laser, earth}],
     Exp = [earth, mars],
-    [
-        {setup, 
-            %Setup
-            fun () -> galaxy_game:setup_universe(P, S, As) end,
-            %Teardown
-            fun (ok) -> galaxy_game:teardown_universe(P) end,
-            %Tests
-            fun (ok) ->
-                    case is_valid_setup(P, S, As) of
-                        {true, true, true} ->
-                            ?_assertEqual(true, true);
-                        V ->
-                            validity_printout(V),
-                            ?_assertEqual(true, false)
-                    end
-            end
-        },
-        {setup,
-            %Setup
-            fun () -> galaxy_game:setup_universe(P, S, As) end,
-            %Teardown
-            fun (ok) -> galaxy_game:teardown_universe(P) end,
-            %Tests
-            fun (ok) -> [?_assertEqual(Exp, galaxy_game:simulate_attack(P, A))] end
-        }
-    ].
+    {foreach, 
+        %Setup
+        fun () -> galaxy_game:setup_universe(P, S, As) end,
+        %Teardown
+        fun (ok) -> galaxy_game:teardown_universe(P) end,
+        %Tests
+    	[{"validates universe setup", fun() ->  validate_setup(P, S, As) end},
+    	 {"simulates a full attack", fun() -> full_simulation(P, A, Exp) end}]
+    }.
+
+validate_setup(P, S, As) ->
+    case is_valid_setup(P, S, As) of
+        {true, true, true} ->
+            ?assertEqual(true, true);
+        V ->
+            validity_printout(V),
+            ?assertEqual(true, false)
+    end.
+
+full_simulation(P, A, Exp) ->
+    ?assertEqual(Exp, galaxy_game:simulate_attack(P, A)).
 
 
 %%==============================================================================

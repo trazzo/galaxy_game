@@ -28,6 +28,7 @@
 
 -export([setup_universe/3, teardown_universe/1, simulate_attack/2]).
 
+-export_type([planet/0]).
 %% @doc Set up a universe described by the input.
 %% The imput is asumed to be minimal and non redundant (i.e. if there is an
 %% alliance {a, b} there won't be an alliance {b, a}).
