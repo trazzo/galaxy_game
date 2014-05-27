@@ -29,6 +29,11 @@
 -export([setup_universe/3, teardown_universe/1, simulate_attack/2]).
 
 -export_type([planet/0]).
+
+%% ================================================================
+%% API
+%% ================================================================
+
 %% @doc Set up a universe described by the input.
 %% The imput is asumed to be minimal and non redundant (i.e. if there is an
 %% alliance {a, b} there won't be an alliance {b, a}).
@@ -37,25 +42,9 @@
 -spec setup_universe([planet()], [shield()], [alliance()]) -> ok.
 %% @end
 setup_universe(Planets, Shields, Alliances) ->
-    ok = lists:foreach(fun (P) ->
-            gen_planet:start(P,lists:member(P, Shields))
-        end, Planets),
+    ok = create_planets(Planets, Shields),
     ok = setup_alliances(Alliances).
-
-%-spec spawn_planet(planet(), boolean()) -> pid().
-%spawn_planet(Name, Shielded) ->
-%    Controller = self(),
-%    spawn(fun () -> planet(Name, Shielded, Controller) end).
-
--spec setup_alliances([alliance()]) -> ok.
-setup_alliances(Alliances) ->
-    ok = lists:foreach(fun({P1, P2}) ->
-            gen_planet:ally_planets(P1,P2)
-        end, Alliances).
-     
-
- 
-
+    
 %% @doc Clean up a universe simulation.
 %% This function will only be called after calling setup_universe/3 with the
 %% same set of planets.
@@ -70,7 +59,6 @@ teardown_universe(Planets) ->
                 _ -> ok
             end
          end, Planets).
-
  
 %% @doc Simulate an attack.
 %% This function will only be called after setting up a universe with the same
@@ -91,3 +79,19 @@ simulate_attack(Planets, Actions) ->
     lists:filter(fun (P) -> is_pid(whereis(P)) end,Planets).
 
 
+%% ================================================================
+%% Internal functions
+%% ================================================================
+
+-spec create_planets([planet], [shield()]) -> ok.
+create_planets(Planets, Shields) ->
+    lists:foreach(fun (P) ->
+            gen_planet:start(P,lists:member(P, Shields))
+        end, Planets).
+
+-spec setup_alliances([alliance()]) -> ok.
+setup_alliances(Alliances) ->
+    ok = lists:foreach(fun({P1, P2}) ->
+            gen_planet:ally_planets(P1,P2)
+        end, Alliances).
+ 
