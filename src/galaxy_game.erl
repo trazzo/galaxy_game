@@ -37,70 +37,23 @@
 %% @end
 setup_universe(Planets, Shields, Alliances) ->
     ok = lists:foreach(fun (P) ->
-            spawn_planet(P, lists:member(P, Shields))
+            gen_planet:start(P,lists:member(P, Shields))
         end, Planets),
-    ok = wait_for_planets(Planets),
     ok = setup_alliances(Alliances).
 
--spec spawn_planet(planet(), boolean()) -> pid().
-spawn_planet(Name, Shielded) ->
-    Controller = self(),
-    spawn(fun () -> planet(Name, Shielded, Controller) end).
+%-spec spawn_planet(planet(), boolean()) -> pid().
+%spawn_planet(Name, Shielded) ->
+%    Controller = self(),
+%    spawn(fun () -> planet(Name, Shielded, Controller) end).
 
 -spec setup_alliances([alliance()]) -> ok.
 setup_alliances(Alliances) ->
-    lists:foreach(fun({P1, P2}) ->
-            P1 ! {ally, P2, self()}
-        end, Alliances),
-    wait_for_planets([P1 || {P1, _} <- Alliances]).    
+    ok = lists:foreach(fun({P1, P2}) ->
+            gen_planet:ally_planets(P1,P2)
+        end, Alliances).
+     
 
--spec planet(planet(), boolean(), pid()) -> any().
-planet(Name, Shield, Pid) ->
-    register(Name,self()),
-    process_flag(trap_exit, Shield),
-    Pid ! {ready, Name},
-    planet(Name,Shield).
-
-planet(Name, Shield) -> % i ve catched Shield variable to put it in the case
-    receive
-        {ally, Planet, Controller} ->
-            link(whereis(Planet)),
-            io:format("~p allied with ~p~n", [Name, Planet]),
-            Controller ! {allied, Name},
-            planet(Name,Shield);
-        {die, Controller} ->
-            io:format("~p told to die~n", [Name]),
-            Controller ! {dead, Name},
-            ok;
-        {die_nuclear, _} ->
-            io:format("~p planet destroyed by nuclear attack~n",[Name]),
-            exit(self(),kill);
-        {die_laser, _} ->
-            case Shield of
-                true ->
-                    io:format("~p is protected with shield, try with a nuclear bomb~n",[Name]),
-                    planet(Name, Shield);
-                false ->
-                    io:format("~p planet destroyed by laser attack~n",[Name]),
-                    exit(self(),laser)
-             end
-    end.
-
-% erlang:whereis(Name) -> pid() | undefined
-% erlang:process_info(pid())
-
-wait_for_planets([]) -> ok;
-wait_for_planets(Planets) ->
-    receive
-        {ready, Planet} ->
-            wait_for_planets(lists:delete(Planet, Planets));
-        {allied, Planet} ->
-            wait_for_planets(lists:delete(Planet, Planets));
-        {dead, Planet} ->
-            wait_for_planets(lists:delete(Planet, Planets))
-    after 5000 ->
-        {error, timeout}
-    end.
+ 
 
 %% @doc Clean up a universe simulation.
 %% This function will only be called after calling setup_universe/3 with the
@@ -110,18 +63,14 @@ wait_for_planets(Planets) ->
 -spec teardown_universe([planet()]) -> ok.
 %% @end
 teardown_universe(Planets) ->
-    RemainingPlanets = lists:foldl(fun(P, Acc) ->
-                case is_pid(whereis(P)) of
-                    true ->
-                        P ! {die, self()},
-                        [P | Acc];
-                    false ->
-                        Acc
-                end
-        end, [], Planets),
-    io:format("RemainingPlanets = ~p~n", [RemainingPlanets]),
-    ok = wait_for_planets(RemainingPlanets).
+    ok = lists:foreach (fun(P) ->
+            case whereis(P) of
+                Pid when is_pid(Pid) -> gen_planet:teardown_planet(P);
+                _ -> ok
+            end
+         end, Planets).
 
+ 
 %% @doc Simulate an attack.
 %% This function will only be called after setting up a universe with the same
 %% set of planets.
@@ -129,15 +78,15 @@ teardown_universe(Planets) ->
 -spec simulate_attack([planet()], [attack()]) -> Survivors::[planet()].
 %% @end
 simulate_attack(Planets, Actions) ->
-    lists:foreach(fun({A,P}) ->
+    lists:map(fun({A,P}) ->
          case A of
             nuclear ->
-                    P ! {die_nuclear, P};
+                   {P, gen_planet:nuclear_attack(P)};
             laser ->
-                    P ! {die_laser, P};
-            _Another -> io:format("try again using a laser or a nuclear attack~n")
+                   {P, gen_planet:laser_attack(P)}%,lists:member(P, Shields));
          end
          end,Actions),
     timer:sleep(200),
     lists:filter(fun (P) -> is_pid(whereis(P)) end,Planets).
-    
+
+
